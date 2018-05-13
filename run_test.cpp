@@ -105,7 +105,7 @@ void open_data(vector<entry> &data, vector<GT> truth){
 }
 
 
-void stitch(Mat& im_0, const Mat& im_1) {
+Mat findMapping(Mat& im_0, const Mat& im_1) {
     //perform translate on im_1 and paste into larger frame
     int offsetx = 0;
     int offsety = 0;
@@ -171,25 +171,25 @@ void stitch(Mat& im_0, const Mat& im_1) {
 	            bestMatches, img_matches, Scalar::all(-1), Scalar::all(-1),
 	            vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 	
-    imwrite("out.png", img_matches);
+    //imwrite("out.png", img_matches);
 	//display(img_matches);
 
 	Mat H = findHomography(src_pts, dst_pts, CV_RANSAC);
+    return H;
 
-	Mat wim_1;
-	warpPerspective(im_1, wim_1, H, im_0.size());
+	//Mat wim_1;
+	//warpPerspective(im_1, wim_1, H, im_0.size());
 
     //copy pixels over
-	for (int i = 0; i < im_0.cols; i++){
-		for (int j = 0; j < im_0.rows; j++) {
-			Vec3b color_im0 = im_0.at<Vec3b>(Point(i, j));
-			Vec3b color_im1 = wim_1.at<Vec3b>(Point(i, j));
-			if (norm(color_im0) == 0)
-				im_0.at<Vec3b>(Point(i, j)) = color_im1;
-
-		}
-    }
-    imwrite("res.png", im_0);
+	//for (int i = 0; i < im_0.cols; i++){
+		//for (int j = 0; j < im_0.rows; j++) {
+			//Vec3b color_im0 = im_0.at<Vec3b>(Point(i, j));
+			//Vec3b color_im1 = wim_1.at<Vec3b>(Point(i, j));
+			//if (norm(color_im0) == 0)
+				//im_0.at<Vec3b>(Point(i, j)) = color_im1;
+		//}
+    //}
+    //imwrite("res.png", im_0);
 }
 
 
@@ -220,7 +220,7 @@ void display(Mat src){
 }
 
 
-double evaluate(Mat a, Mat b, GT t){
+double evaluate(Mat a, Mat b){
     //steps:
     //isolate specific region from righthand side of Mat b
     //transform according to the ground truth
@@ -241,6 +241,24 @@ double evaluate(Mat a, Mat b, GT t){
 
 }
 
+double evaluate2(Mat H, GT t){
+    vector<Mat> rs_decomp, ts_decomp, normals_decomp;
+    Mat rvec_decomp, K;
+    size_t n;
+    K = (Mat_<double>(3, 3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);
+    n = decomposeHomographyMat(H, K, rs_decomp, ts_decomp, normals_decomp);
+    cout << "GT: " << endl;
+    cout << "o: " << t.o << ", r: " << t.r << ", s: " << t.s << endl;
+    for (size_t i = 0; i < n; i++){
+        Rodrigues(rs_decomp[i], rvec_decomp);
+        cout << "--------------------------------------" << endl;
+        cout << rvec_decomp << endl;
+        cout << rs_decomp[i] << endl;
+        cout << ts_decomp[i] << endl;
+        cout << normals_decomp[i] << endl;
+    }
+    return 0.0;
+}
 
 
 void batch_test(int n){
@@ -249,7 +267,7 @@ void batch_test(int n){
     load_truth(truth);
     open_data(data, truth);
 
-    Mat im_0, im_1, im_2;
+    Mat im_0, im_1, im_2, H;
     double err = 0.0, total_err = 0.0, max_err = 0.0;
 
     for (int i = 0; i < min((int)data.size(), n); i++){
@@ -257,11 +275,13 @@ void batch_test(int n){
         im_0 = imread(data[i].l, CV_LOAD_IMAGE_COLOR);
         im_1 = imread(data[i].r, CV_LOAD_IMAGE_COLOR);
         im_2 = imread(data[i].orig, CV_LOAD_IMAGE_COLOR);
-        stitch(im_0, im_1);
+        H = findMapping(im_0, im_1);
         //imwrite("data/res/" + to_string(i) + ".png", im_0);
-        err = evaluate(im_0, im_2, truth[i]);
+        //err = evaluate(im_0, im_2, truth[i]);
+        err = evaluate2(H, truth[i]);
         total_err += err;
         max_err = max(err, max_err);
+        break;
     }
 	cout << "total error is: " << total_err << endl;
 

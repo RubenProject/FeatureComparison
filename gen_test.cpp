@@ -1,5 +1,5 @@
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <vector>
 #include <fstream>
@@ -44,7 +44,6 @@ void get_filenames(vector<string> &f_name){
         }
     }
 }
-
 
 
 void batch_convert(vector<string> f_name){
@@ -94,7 +93,7 @@ void display(Mat a){
 void convert(const Mat m, Mat &a, Mat &b, int o, double r, double s){
     // overlap
     a = m(Rect(0, 0, 600, 600)).clone();
-    b = m(Rect(600 - 400, 0, 600, 600)).clone();
+    b = m(Rect(600 - o, 0, 600, 600)).clone();
     // rotate
     Point c = Point(b.cols/2, b.rows/2);
     Mat r_m = getRotationMatrix2D(c, r, 1.0);
